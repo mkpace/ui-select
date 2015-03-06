@@ -3,3 +3,5 @@
 /.idea
 /.tmp
 .DS_Store
+*.config
+*.html

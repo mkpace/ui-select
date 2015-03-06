@@ -301,6 +301,8 @@ uis.controller('uiSelectCtrl',
   ctrl.clickTriggeredSelect = false;
   ctrl.$filter = $filter;
 
+  ctrl.saveItem = {};
+
   ctrl.isEmpty = function() {
     return angular.isUndefined(ctrl.selected) || ctrl.selected === null || ctrl.selected === '';
   };
@@ -767,26 +769,34 @@ uis.controller('uiSelectCtrl',
 
       if (!processed && (ctrl.items.length > 0 || ctrl.tagging.isActivated)) {
         processed = _handleDropDownSelection(key);
-        if ( ctrl.taggingTokens.isActivated ) {
-          for (var i = 0; i < ctrl.taggingTokens.tokens.length; i++) {
-            if ( ctrl.taggingTokens.tokens[i] === KEY.MAP[e.keyCode] ) {
-              // make sure there is a new value to push via tagging
-              if ( ctrl.search.length > 0 ) {
-                tagged = true;
-              }
+        if (ctrl.taggingTokens.isActivated) {
+            for (var i = 0; i < ctrl.taggingTokens.tokens.length; i++) {
+                if (ctrl.taggingTokens.tokens[i] === KEY.MAP[e.keyCode]) {
+                    // make sure there is a new value to push via tagging
+                    if (ctrl.search.length > 0) {
+                        tagged = true;
+                    }
+                }
             }
-          }
-          if ( tagged ) {
-            $timeout(function() {
-              _searchInput.triggerHandler('tagged');
-              var newItem = ctrl.search.replace(KEY.MAP[e.keyCode],'').trim();
-              if ( ctrl.tagging.fct ) {
-                newItem = ctrl.tagging.fct( newItem );
-              }
-              if (newItem) ctrl.select(newItem, true);
-            });
-          }
+            if (tagged) {
+                $timeout(function () {
+                    _searchInput.triggerHandler('tagged');
+                    var newItem = ctrl.search.replace(KEY.MAP[e.keyCode], '').trim();
+                    if (ctrl.tagging.fct) {
+                        newItem = ctrl.tagging.fct(newItem);
+                    }
+                    if (newItem) ctrl.select(newItem, true);
+                });
+            }
         }
+      } else {
+          // KINGPIN-FEATURE: Implements feature to allow ad-hoc entries
+          console.log('2-not an option: %o: %o', key, ctrl.search);
+          //$select.addItem
+          if (key === KEY.ENTER) {
+              ctrl.items.push(ctrl.search);
+              ctrl.saveItem(ctrl.search);
+          }
       }
 
       if (processed  && key != KEY.TAB) {
@@ -1026,7 +1036,9 @@ uis.directive('uiSelect',
     transclude: true,
     require: ['uiSelect', '^ngModel'],
     scope: true,
-
+    bindToController: {
+        myMethod: '&'
+    },
     controller: 'uiSelectCtrl',
     controllerAs: '$select',
 
@@ -1057,6 +1069,13 @@ uis.directive('uiSelect',
 
       $select.onSelectCallback = $parse(attrs.onSelect);
       $select.onRemoveCallback = $parse(attrs.onRemove);
+
+      // KINGPIN-FEATURE: adds reference to add item callback
+      //$select.saveItem = function (i) {
+      //    return $parse(attrs.saveItem)(i);
+      //};
+
+      $select.saveItem = $parse(attrs.myMethod);
 
       //From view --> model
       ngModel.$parsers.unshift(function (inputValue) {
